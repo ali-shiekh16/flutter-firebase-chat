@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'screens/chat_list_screen.dart';
 import 'screens/login_screen.dart';
@@ -16,25 +17,117 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _isDarkMode = false;
+  final ThemeMode _themeMode = ThemeMode.system;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadThemeMode();
+  }
+  
+  // Load saved theme preference
+  Future<void> _loadThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isDarkMode = prefs.getBool('isDarkMode') ?? false;
+    });
+  }
+  
+  // Save theme preference
+  Future<void> _setThemeMode(bool isDark) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isDarkMode', isDark);
+    setState(() {
+      _isDarkMode = isDark;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Chat App',
+      debugShowCheckedModeBanner: false,
+      themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
-        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 1),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
+        ),
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          elevation: 2,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          filled: true,
+        ),
       ),
-      home: const AuthWrapper(),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        appBarTheme: AppBarTheme(
+          centerTitle: true, 
+          elevation: 2,
+          backgroundColor: Colors.grey[900],
+        ),
+        scaffoldBackgroundColor: Colors.grey[850],
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          filled: true,
+        ),
+      ),
+      home: AppWrapper(
+        setThemeMode: _setThemeMode,
+        isDarkMode: _isDarkMode,
+      ),
     );
   }
 }
 
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
+class AppWrapper extends StatelessWidget {
+  final Function(bool) setThemeMode;
+  final bool isDarkMode;
+  
+  const AppWrapper({
+    super.key, 
+    required this.setThemeMode,
+    required this.isDarkMode,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +136,10 @@ class AuthWrapper extends StatelessWidget {
       builder: (context, snapshot) {
         // If the snapshot has user data, then the user is signed in
         if (snapshot.hasData && snapshot.data != null) {
-          return const ChatListScreen();
+          return ChatListScreen(
+            setThemeMode: setThemeMode,
+            isDarkMode: isDarkMode,
+          );
         }
 
         // Otherwise, the user is not signed in
